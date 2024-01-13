@@ -9,7 +9,7 @@ import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.services.sqs.SqsClient
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest
 
-internal class SqsProducerExecutor(private val sqs: SqsClient) {
+class SqsProducerExecutor(private val sqs: SqsClient) {
     suspend fun <T> produce(
         producer: SqsProducer<T>,
         productionConfiguration: SqsDataProductionConfiguration

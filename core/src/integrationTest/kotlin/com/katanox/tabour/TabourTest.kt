@@ -126,12 +126,15 @@ class TabourTest {
             val producer =
                 sqsProducer(URL(nonFifoQueueUrl), "test-producer") { onError = { println(it) } }
             val consumer =
-                sqsConsumer(URL(nonFifoQueueUrl), key = "my-consumer") {
-                    this.onSuccess = {
+                sqsConsumer(
+                    URL(nonFifoQueueUrl),
+                    key = "my-consumer",
+                    onSuccess = {
                         counter++
                         true
-                    }
-                    this.onError = ::println
+                    },
+                    onError = ::println
+                ) {
                     this.config = sqsConsumerConfiguration {
                         sleepTime = Duration.ofMillis(200)
                         consumeWhile = { counter < 1 }
@@ -188,12 +191,15 @@ class TabourTest {
             val producer =
                 sqsProducer(URL(nonFifoQueueUrl), "test-producer") { onError = { println(it) } }
             val consumer =
-                sqsConsumer(URL(nonFifoQueueUrl), key = "my-consumer") {
+                sqsConsumer(
+                    URL(nonFifoQueueUrl),
+                    key = "my-consumer",
                     onSuccess = {
                         counter++
                         true
-                    }
+                    },
                     onError = ::println
+                ) {
                     this.config = sqsConsumerConfiguration {
                         sleepTime = Duration.ofMillis(200)
                         consumeWhile = { counter < 1 }
@@ -239,12 +245,15 @@ class TabourTest {
             val producer =
                 sqsProducer(URL(nonFifoQueueUrl), "test-producer") { onError = { println(it) } }
             val consumer =
-                sqsConsumer(URL(nonFifoQueueUrl), key = "my-consumer") {
-                    this.onSuccess = {
+                sqsConsumer(
+                    URL(nonFifoQueueUrl),
+                    key = "my-consumer",
+                    onSuccess = {
                         counter++
                         true
-                    }
-                    this.onError = ::println
+                    },
+                    onError = ::println
+                ) {
                     this.config = sqsConsumerConfiguration {
                         sleepTime = Duration.ofMillis(200)
                         consumeWhile = { counter < 50 }

@@ -64,7 +64,7 @@ internal class SqsPoller(private val sqs: SqsClient) {
                     acknowledge = false
                 }
 
-                delay(3000)
+                delay(5000)
             }
         }
         jobs = jobIndexes

@@ -23,6 +23,7 @@ import java.net.URL
 import java.time.Duration
 import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -97,6 +98,21 @@ class TabourTest {
     fun cleanup() {
         sqsClient.deleteQueue(DeleteQueueRequest.builder().queueUrl(nonFifoQueueUrl).build())
         sqsClient.deleteQueue(DeleteQueueRequest.builder().queueUrl(fifoQueueUrl).build())
+    }
+
+    @Test
+    fun isRunningIsTrue() = runTest {
+        val container = tabour { numOfThreads = 1 }
+        container.start()
+        assertTrue { container.running() }
+    }
+
+    @Test
+    fun isRunningIsFalse() = runTest {
+        val container = tabour { numOfThreads = 1 }
+        container.start()
+        container.stop()
+        assertFalse { container.running() }
     }
 
     @Test

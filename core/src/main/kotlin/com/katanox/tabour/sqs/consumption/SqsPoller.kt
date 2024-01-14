@@ -109,25 +109,22 @@ internal class SqsPoller(private val sqs: SqsClient) {
         }
     }
 
-    private suspend fun <T> handleMessages(messages: List<Message>, consumer: SqsConsumer<T>) =
-        coroutineScope {
-            messages.forEach { message ->
-                launch {
-                    try {
-                        if (consumer.onSuccess(message)) {
-                            consumer.notifyPlugs(message)
-                            toAcknowledge.send(ToBeAcknowledged(consumer.queueUri, message))
-                        } else {
-                            val error = ConsumptionError.UnsuccessfulConsumption(message)
-                            consumer.onError(error)
-                            consumer.notifyPlugs(message, error)
-                        }
-                    } catch (e: Throwable) {
-                        consumer.onError(ConsumptionError.ThrowableDuringHanding(e))
-                    }
+    private suspend fun <T> handleMessages(messages: List<Message>, consumer: SqsConsumer<T>) {
+        messages.forEach { message ->
+            try {
+                if (consumer.onSuccess(message)) {
+                    consumer.notifyPlugs(message)
+                    toAcknowledge.send(ToBeAcknowledged(consumer.queueUri, message))
+                } else {
+                    val error = ConsumptionError.UnsuccessfulConsumption(message)
+                    consumer.onError(error)
+                    consumer.notifyPlugs(message, error)
                 }
+            } catch (e: Throwable) {
+                consumer.onError(ConsumptionError.ThrowableDuringHanding(e))
             }
         }
+    }
 
     private suspend fun <T> SqsConsumer<T>.notifyPlugs(
         message: Message,

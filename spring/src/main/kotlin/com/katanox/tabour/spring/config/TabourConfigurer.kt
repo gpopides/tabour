@@ -6,10 +6,10 @@ import com.katanox.tabour.configuration.core.tabour
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationListener
-import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.stereotype.Component
@@ -23,13 +23,18 @@ class TabourConfigurer
 class ContextRefreshedEventListener(
     @Value("\${tabour.config.num-of-threads:2}") val threadsCount: Int
 ) : ApplicationListener<ContextRefreshedEvent?> {
+    private var tabour: Tabour? = null
+
     override fun onApplicationEvent(contextRefreshedEvent: ContextRefreshedEvent?) {
         if (contextRefreshedEvent?.applicationContext != null) {
             setupTabour(contextRefreshedEvent.applicationContext)
         }
     }
 
-    @Bean @Lazy(false) fun tabourBean(): Tabour = tabour { this.numOfThreads = threadsCount }
+    @Lazy(false)
+    fun tabourBean(): Tabour = tabour { this.numOfThreads = threadsCount }.also { this.tabour = it }
+
+    fun destroy() = this.tabour?.stop()
 
     private fun setupTabour(context: ApplicationContext) {
         val annotatedBeans: Map<String, Any> =
@@ -47,6 +52,13 @@ class ContextRefreshedEventListener(
                 }
             }
         }
+    }
+}
+
+@Component
+class TabourDisposer(private val tabour: Tabour) : DisposableBean {
+    override fun destroy() {
+        tabour.stop()
     }
 }
 

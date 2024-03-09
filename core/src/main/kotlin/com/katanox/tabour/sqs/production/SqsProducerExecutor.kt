@@ -72,20 +72,38 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
             }
             is BatchSqsData -> {
                 if (produceData.data.isNotEmpty()) {
-                    retry(producer.config.retries, { producer.onError(throwableToError(it)) }) {
-                        val response =
-                            sqs.sendMessageBatch {
-                                produceData.buildMessageRequest(it)
-                                it.queueUrl(url)
-                            }
-
-                        response.failed().forEach {
-                            producer.notifyPlugs(
-                                it.message(),
-                                throwableToError(RuntimeException(it.message()))
-                            )
+                    produceData.data
+                        .chunked(10) {
+                            SendMessageBatchRequest.builder()
+                                .queueUrl(url)
+                                .entries(buildBatchGroup(it))
+                                .build()
                         }
-                    }
+                        .forEach { request ->
+                            retry(
+                                producer.config.retries,
+                                { producer.onError(throwableToError(it)) }
+                            ) {
+                                val response = sqs.sendMessageBatch(request)
+
+                                if (!response.hasFailed()) {
+                                    response.successful().zip(produceData.data).forEach {
+                                        (entry, data) ->
+                                        productionConfiguration.dataProduced(
+                                            data,
+                                            SqsMessageProduced(entry.messageId(), Instant.now())
+                                        )
+                                    }
+                                } else {
+                                    response.failed().forEach {
+                                        producer.notifyPlugs(
+                                            it.message(),
+                                            throwableToError(RuntimeException(it.message()))
+                                        )
+                                    }
+                                }
+                            }
+                        }
                 }
             }
         }
@@ -137,14 +155,10 @@ private fun SqsDataForProduction.buildMessageRequest(
     }
 }
 
-private fun BatchSqsData.buildMessageRequest(builder: SendMessageBatchRequest.Builder) {
-    builder.entries(
-        data
-            .map {
-                val entryBuilder = SendMessageBatchRequestEntry.builder()
-                it.buildMessageRequest(entryBuilder)
-                entryBuilder.build()
-            }
-
-    )
-}
+private fun buildBatchGroup(data: List<SqsDataForProduction>): List<SendMessageBatchRequestEntry> =
+    data.mapIndexed { i, it ->
+        val entryBuilder = SendMessageBatchRequestEntry.builder()
+        it.buildMessageRequest(entryBuilder)
+        entryBuilder.id(i.toString())
+        entryBuilder.build()
+    }

@@ -18,7 +18,6 @@ import com.katanox.tabour.plug.SuccessPlugRecord
 import com.katanox.tabour.sqs.production.FifoQueueData
 import com.katanox.tabour.sqs.production.NonFifoQueueData
 import com.katanox.tabour.sqs.production.SqsData
-import com.katanox.tabour.sqs.production.SqsDataForProduction
 import com.katanox.tabour.sqs.production.SqsDataProductionConfiguration
 import com.katanox.tabour.sqs.production.SqsMessageProduced
 import java.net.URI

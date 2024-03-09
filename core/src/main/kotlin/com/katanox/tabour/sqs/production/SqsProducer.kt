@@ -25,7 +25,6 @@ internal constructor(
     var config: SqsProducerConfiguration = sqsProducerConfiguration { retries = 1 }
 }
 
-
 sealed interface SqsData
 
 /**

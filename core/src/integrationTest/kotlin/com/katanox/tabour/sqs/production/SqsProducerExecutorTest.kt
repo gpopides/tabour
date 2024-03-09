@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SqsProducerExecutorTest {
     private val localstack =
-        LocalStackContainer(DockerImageName.parse("localstack/localstack:2.2.0"))
+        LocalStackContainer(DockerImageName.parse("localstack/localstack:3.2"))
             .withServices(LocalStackContainer.Service.SQS)
             .withReuse(true)
 
@@ -163,18 +163,17 @@ class SqsProducerExecutorTest {
         val executor = SqsProducerExecutor(sqsClient)
 
         val producer =
-            sqsProducer(
-                URL.of(URI.create(nonFifoQueueUrl), null),
-                "fifo-queue-producer",
-                ::println
-            )
+            sqsProducer(URL.of(URI.create(fifoQueueUrl), null), "fifo-queue-producer", ::println)
         var producedCount = 0
         val pfc =
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
                     BatchSqsData(
-                        listOf(FifoQueueData("my message", messageGroupId = "ad"), FifoQueueData("my message 2", messageGroupId = "abc"))
+                        listOf(
+                            FifoQueueData("batch message", messageGroupId = "ohello"),
+                            FifoQueueData("batch message 2 asdadsadasda", messageGroupId = "ohello")
+                        )
                     )
                 },
                 resourceNotFound = { _ -> }
@@ -183,13 +182,9 @@ class SqsProducerExecutorTest {
         executor.produce(producer, pfc)
 
         val response =
-            sqsClient.receiveMessage(
-                ReceiveMessageRequest.builder().queueUrl(nonFifoQueueUrl).build()
-            )
+            sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(fifoQueueUrl).build())
 
-        println(response.messages())
-
-        //        assertEquals(1, producedCount)
-        //        assertTrue { response.messages().isNotEmpty() }
+        assertEquals(2, producedCount)
+        assertTrue { response.messages().isNotEmpty() }
     }
 }

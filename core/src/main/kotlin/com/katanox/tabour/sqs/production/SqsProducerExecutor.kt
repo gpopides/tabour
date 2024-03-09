@@ -7,6 +7,8 @@ import java.time.Instant
 import software.amazon.awssdk.awscore.exception.AwsServiceException
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.services.sqs.SqsClient
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest
 
 internal class SqsProducerExecutor(private val sqs: SqsClient) {
@@ -18,47 +20,73 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
 
         val url = producer.queueUrl.toString()
 
-        if (!produceData.message.isNullOrEmpty() && url.isNotEmpty()) {
-            retry(
-                producer.config.retries,
-                {
-                    val error =
-                        when (it) {
-                            is AwsServiceException ->
-                                ProductionError.AwsError(details = it.awsErrorDetails())
-                            is SdkClientException -> ProductionError.AwsSdkClientError(it)
-                            else -> ProductionError.UnrecognizedError(it)
-                        }
+        if (url.isEmpty()) {
+            producer.onError(ProductionError.EmptyUrl(producer.queueUrl))
+            return
+        }
 
-                    producer.onError(error)
-                    producer.notifyPlugs(produceData.message, error)
-                }
-            ) {
-                val response =
-                    sqs.sendMessage {
-                        produceData.buildMessageRequest(it)
-                        it.queueUrl(url)
-                    }
-
-                if (response.messageId().isNotEmpty()) {
-                    productionConfiguration.dataProduced(
-                        produceData,
-                        SqsMessageProduced(response.messageId(), Instant.now())
-                    )
-                }
-
-                producer.notifyPlugs(produceData.message)
+        val throwableToError: (Throwable) -> ProductionError = {
+            when (it) {
+                is AwsServiceException -> ProductionError.AwsError(details = it.awsErrorDetails())
+                is SdkClientException -> ProductionError.AwsSdkClientError(it)
+                else -> ProductionError.UnrecognizedError(it)
             }
-        } else {
-            val error =
-                when {
-                    url.isEmpty() -> ProductionError.EmptyUrl(producer.queueUrl)
-                    produceData.message.isNullOrEmpty() -> ProductionError.EmptyMessage(produceData)
-                    else -> null
-                }
+        }
 
-            if (error != null) {
-                producer.notifyPlugs(produceData.message, error)
+        when (produceData) {
+            is SqsDataForProduction -> {
+                if (!produceData.message.isNullOrEmpty()) {
+                    retry(
+                        producer.config.retries,
+                        {
+                            val error = throwableToError(it)
+
+                            producer.onError(error)
+                            producer.notifyPlugs(produceData.message, error)
+                        }
+                    ) {
+                        sqs.sendMessage {
+                                produceData.buildMessageRequest(it)
+                                it.queueUrl(url)
+                            }
+                            .let { response ->
+                                if (response.messageId().isNotEmpty()) {
+                                    productionConfiguration.dataProduced(
+                                        produceData,
+                                        SqsMessageProduced(response.messageId(), Instant.now())
+                                    )
+
+                                    producer.notifyPlugs(produceData.message)
+                                }
+                            }
+                    }
+                } else {
+                    if (produceData.message.isNullOrEmpty()) {
+                        producer.onError(ProductionError.EmptyMessage(produceData))
+                        producer.notifyPlugs(
+                            produceData.message,
+                            ProductionError.EmptyMessage(produceData)
+                        )
+                    }
+                }
+            }
+            is BatchSqsData -> {
+                if (produceData.data.isNotEmpty()) {
+                    retry(producer.config.retries, { producer.onError(throwableToError(it)) }) {
+                        val response =
+                            sqs.sendMessageBatch {
+                                produceData.buildMessageRequest(it)
+                                it.queueUrl(url)
+                            }
+
+                        response.failed().forEach {
+                            producer.notifyPlugs(
+                                it.message(),
+                                throwableToError(RuntimeException(it.message()))
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -80,7 +108,6 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
 }
 
 private fun SqsDataForProduction.buildMessageRequest(builder: SendMessageRequest.Builder) {
-
     when (this) {
         is FifoQueueData -> {
             builder.messageBody(message)
@@ -92,4 +119,30 @@ private fun SqsDataForProduction.buildMessageRequest(builder: SendMessageRequest
         }
         is NonFifoQueueData -> builder.messageBody(message)
     }
+}
+
+private fun SqsDataForProduction.buildMessageRequest(
+    builder: SendMessageBatchRequestEntry.Builder
+) {
+    when (this) {
+        is FifoQueueData -> {
+            builder.messageBody(message)
+            builder.messageGroupId(messageGroupId)
+
+            if (messageDeduplicationId != null) {
+                builder.messageDeduplicationId(messageDeduplicationId)
+            }
+        }
+        is NonFifoQueueData -> builder.messageBody(message)
+    }
+}
+
+private fun BatchSqsData.buildMessageRequest(builder: SendMessageBatchRequest.Builder) {
+    builder.entries(
+        data.map {
+            val entryBuilder = SendMessageBatchRequestEntry.builder()
+            it.buildMessageRequest(entryBuilder)
+            entryBuilder.build()
+        }
+    )
 }

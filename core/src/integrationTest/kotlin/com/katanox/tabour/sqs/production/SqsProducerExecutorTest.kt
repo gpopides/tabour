@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -18,6 +19,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sqs.SqsClient
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest
+import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 
@@ -33,8 +35,14 @@ class SqsProducerExecutorTest {
     private lateinit var nonFifoQueueUrl: String
     private lateinit var fifoQueueUrl: String
 
-    @AfterAll
+    @AfterEach
     fun cleanup() {
+        sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(nonFifoQueueUrl).build())
+        sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(fifoQueueUrl).build())
+    }
+
+    @AfterAll
+    fun deleteQueues() {
         sqsClient.deleteQueue(DeleteQueueRequest.builder().queueUrl(nonFifoQueueUrl).build())
         sqsClient.deleteQueue(DeleteQueueRequest.builder().queueUrl(fifoQueueUrl).build())
     }
@@ -105,7 +113,7 @@ class SqsProducerExecutorTest {
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
-                    FifoQueueData("my message", "groupid", messageDeduplicationId = "dedup")
+                    FifoQueueData("my message dedup", "groupid", messageDeduplicationId = "dedup")
                 },
                 resourceNotFound = { _ -> }
             )
@@ -114,7 +122,7 @@ class SqsProducerExecutorTest {
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
-                    FifoQueueData("my message", "groupid", messageDeduplicationId = "dedup")
+                    FifoQueueData("my message dedup", "groupid", messageDeduplicationId = "dedup")
                 },
                 resourceNotFound = { _ -> }
             )
@@ -172,7 +180,7 @@ class SqsProducerExecutorTest {
                     BatchSqsData(
                         listOf(
                             FifoQueueData("batch message", messageGroupId = "ohello"),
-                            FifoQueueData("batch message 2 asdadsadasda", messageGroupId = "ohello")
+                            FifoQueueData("batch message 2", messageGroupId = "ohello")
                         )
                     )
                 },
@@ -182,9 +190,14 @@ class SqsProducerExecutorTest {
         executor.produce(producer, pfc)
 
         val response =
-            sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(fifoQueueUrl).build())
+            sqsClient.receiveMessage(
+                ReceiveMessageRequest.builder()
+                    .queueUrl(fifoQueueUrl)
+                    .maxNumberOfMessages(10)
+                    .build()
+            )
 
         assertEquals(2, producedCount)
-        assertTrue { response.messages().isNotEmpty() }
+        assertEquals(2, response.messages().size)
     }
 }

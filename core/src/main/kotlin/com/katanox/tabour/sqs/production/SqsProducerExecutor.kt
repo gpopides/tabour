@@ -159,6 +159,6 @@ private fun buildBatchGroup(data: List<SqsDataForProduction>): List<SendMessageB
     data.mapIndexed { i, it ->
         val entryBuilder = SendMessageBatchRequestEntry.builder()
         it.buildMessageRequest(entryBuilder)
-        entryBuilder.id(i.toString())
+        entryBuilder.id((i + 1).toString())
         entryBuilder.build()
     }

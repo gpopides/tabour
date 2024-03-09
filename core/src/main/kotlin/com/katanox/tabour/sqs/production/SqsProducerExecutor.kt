@@ -34,7 +34,7 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
         }
 
         when (produceData) {
-            is SqsDataForProduction -> {
+            is SqsProductionData -> {
                 if (!produceData.message.isNullOrEmpty()) {
                     retry(
                         producer.config.retries,
@@ -70,7 +70,7 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
                     }
                 }
             }
-            is BatchSqsData -> {
+            is BatchDataForProduction -> {
                 if (produceData.data.isNotEmpty()) {
                     produceData.data
                         .chunked(10) {
@@ -125,9 +125,9 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
     }
 }
 
-private fun SqsDataForProduction.buildMessageRequest(builder: SendMessageRequest.Builder) {
+private fun SqsProductionData.buildMessageRequest(builder: SendMessageRequest.Builder) {
     when (this) {
-        is FifoQueueData -> {
+        is FifoDataProduction -> {
             builder.messageBody(message)
             builder.messageGroupId(messageGroupId)
 
@@ -135,15 +135,13 @@ private fun SqsDataForProduction.buildMessageRequest(builder: SendMessageRequest
                 builder.messageDeduplicationId(messageDeduplicationId)
             }
         }
-        is NonFifoQueueData -> builder.messageBody(message)
+        is NonFifoDataProduction -> builder.messageBody(message)
     }
 }
 
-private fun SqsDataForProduction.buildMessageRequest(
-    builder: SendMessageBatchRequestEntry.Builder
-) {
+private fun SqsProductionData.buildMessageRequest(builder: SendMessageBatchRequestEntry.Builder) {
     when (this) {
-        is FifoQueueData -> {
+        is FifoDataProduction -> {
             builder.messageBody(message)
             builder.messageGroupId(messageGroupId)
 
@@ -151,11 +149,11 @@ private fun SqsDataForProduction.buildMessageRequest(
                 builder.messageDeduplicationId(messageDeduplicationId)
             }
         }
-        is NonFifoQueueData -> builder.messageBody(message)
+        is NonFifoDataProduction -> builder.messageBody(message)
     }
 }
 
-private fun buildBatchGroup(data: List<SqsDataForProduction>): List<SendMessageBatchRequestEntry> =
+private fun buildBatchGroup(data: List<SqsProductionData>): List<SendMessageBatchRequestEntry> =
     data.mapIndexed { i, it ->
         val entryBuilder = SendMessageBatchRequestEntry.builder()
         it.buildMessageRequest(entryBuilder)

@@ -89,7 +89,7 @@ class SqsProducerExecutorTest {
         val pfc =
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
-                produceData = { FifoQueueData("my message", "groupid") },
+                produceData = { FifoDataProduction("my message", "groupid") },
                 resourceNotFound = { _ -> }
             )
 
@@ -113,7 +113,11 @@ class SqsProducerExecutorTest {
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
-                    FifoQueueData("my message dedup", "groupid", messageDeduplicationId = "dedup")
+                    FifoDataProduction(
+                        "my message dedup",
+                        "groupid",
+                        messageDeduplicationId = "dedup"
+                    )
                 },
                 resourceNotFound = { _ -> }
             )
@@ -122,7 +126,11 @@ class SqsProducerExecutorTest {
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
-                    FifoQueueData("my message dedup", "groupid", messageDeduplicationId = "dedup")
+                    FifoDataProduction(
+                        "my message dedup",
+                        "groupid",
+                        messageDeduplicationId = "dedup"
+                    )
                 },
                 resourceNotFound = { _ -> }
             )
@@ -151,7 +159,7 @@ class SqsProducerExecutorTest {
         val pfc =
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
-                produceData = { NonFifoQueueData("my message") },
+                produceData = { NonFifoDataProduction("my message") },
                 resourceNotFound = { _ -> }
             )
 
@@ -177,10 +185,10 @@ class SqsProducerExecutorTest {
             SqsDataProductionConfiguration(
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = {
-                    BatchSqsData(
+                    BatchDataForProduction(
                         listOf(
-                            FifoQueueData("batch message", messageGroupId = "ohello"),
-                            FifoQueueData("batch message 2", messageGroupId = "ohello")
+                            FifoDataProduction("batch message", messageGroupId = "ohello"),
+                            FifoDataProduction("batch message 2", messageGroupId = "ohello")
                         )
                     )
                 },

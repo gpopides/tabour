@@ -25,23 +25,23 @@ internal constructor(
     var config: SqsProducerConfiguration = sqsProducerConfiguration { retries = 1 }
 }
 
-sealed interface SqsData
+sealed interface SqsDataForProduction
 
 /**
  * SQS producers use instances of this interfaces in order to produce messages to queues.
- * - For FIFO queues use [FifoQueueData]
- * - For Non FIFO queues use [NonFifoQueueData]
+ * - For FIFO queues use [FifoDataProduction]
+ * - For Non FIFO queues use [NonFifoDataProduction]
  */
-sealed interface SqsDataForProduction : SqsData {
+sealed interface SqsProductionData : SqsDataForProduction {
     val message: String?
 }
 
-data class FifoQueueData(
+data class FifoDataProduction(
     override val message: String?,
     val messageGroupId: String,
     val messageDeduplicationId: String? = null
-) : SqsDataForProduction
+) : SqsProductionData
 
-data class NonFifoQueueData(override val message: String?) : SqsDataForProduction
+data class NonFifoDataProduction(override val message: String?) : SqsProductionData
 
-data class BatchSqsData(val data: List<SqsDataForProduction>) : SqsData
+data class BatchDataForProduction(val data: List<SqsProductionData>) : SqsDataForProduction

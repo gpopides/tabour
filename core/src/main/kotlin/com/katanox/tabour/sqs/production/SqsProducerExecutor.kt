@@ -139,10 +139,12 @@ private fun SqsDataForProduction.buildMessageRequest(
 
 private fun BatchSqsData.buildMessageRequest(builder: SendMessageBatchRequest.Builder) {
     builder.entries(
-        data.map {
-            val entryBuilder = SendMessageBatchRequestEntry.builder()
-            it.buildMessageRequest(entryBuilder)
-            entryBuilder.build()
-        }
+        data
+            .map {
+                val entryBuilder = SendMessageBatchRequestEntry.builder()
+                it.buildMessageRequest(entryBuilder)
+                entryBuilder.build()
+            }
+
     )
 }

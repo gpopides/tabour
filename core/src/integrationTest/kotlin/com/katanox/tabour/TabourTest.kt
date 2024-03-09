@@ -17,7 +17,9 @@ import com.katanox.tabour.plug.ProducerPlug
 import com.katanox.tabour.plug.SuccessPlugRecord
 import com.katanox.tabour.sqs.production.FifoQueueData
 import com.katanox.tabour.sqs.production.NonFifoQueueData
+import com.katanox.tabour.sqs.production.SqsData
 import com.katanox.tabour.sqs.production.SqsDataForProduction
+import com.katanox.tabour.sqs.production.SqsDataProductionConfiguration
 import com.katanox.tabour.sqs.production.SqsMessageProduced
 import java.net.URI
 import java.net.URL
@@ -135,7 +137,7 @@ class TabourTest {
             val sqsRegistry = sqsRegistry(config)
             var counter = 0
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                DataProductionConfiguration<SqsData, SqsMessageProduced>(
                     produceData = { NonFifoQueueData("this is a test message") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -201,7 +203,7 @@ class TabourTest {
             val sqsRegistry = sqsRegistry(config)
             var counter = 0
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { NonFifoQueueData("this is a test message") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -289,7 +291,7 @@ class TabourTest {
             container.start()
 
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { NonFifoQueueData("this is a test message") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -320,7 +322,7 @@ class TabourTest {
 
             val sqsRegistry = sqsRegistry(config)
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { NonFifoQueueData("this is a test message") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -375,7 +377,7 @@ class TabourTest {
 
             val sqsRegistry = sqsRegistry(config)
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { FifoQueueData("this is a fifo test message", "group1") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -435,7 +437,7 @@ class TabourTest {
 
             val sqsRegistry = sqsRegistry(config)
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { FifoQueueData("this is a fifo test message", "group1") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { _ -> println("Resource not found") }
@@ -508,11 +510,11 @@ class TabourTest {
                 }
 
             val sqsRegistry = sqsRegistry(config)
-            var expectedProduceData: SqsDataForProduction? = null
+            var expectedProduceData: SqsData? = null
             var producedDataEvent: SqsMessageProduced? = null
 
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { FifoQueueData("this is a fifo test message", "group1") },
                     dataProduced = { data, event ->
                         expectedProduceData = data
@@ -565,7 +567,7 @@ class TabourTest {
             val sqsRegistry = sqsRegistry(config)
             var resourceNotFound: ProductionResourceNotFound? = null
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { FifoQueueData("this is a fifo test message", "group1") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { error -> resourceNotFound = error }
@@ -610,7 +612,7 @@ class TabourTest {
             val sqsRegistry = sqsRegistry(config)
             var resourceNotFound: ProductionResourceNotFound? = null
             val sqsProducerConfiguration =
-                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                SqsDataProductionConfiguration(
                     produceData = { FifoQueueData("this is a fifo test message", "group1") },
                     dataProduced = { _, _ -> },
                     resourceNotFound = { error -> resourceNotFound = error }

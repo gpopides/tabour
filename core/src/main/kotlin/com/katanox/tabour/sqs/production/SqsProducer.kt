@@ -39,7 +39,7 @@ sealed interface SqsDataForProduction : SqsData {
 
 data class FifoQueueData(
     override val message: String?,
-    val messageGroupId: String = "",
+    val messageGroupId: String,
     val messageDeduplicationId: String? = null
 ) : SqsDataForProduction
 

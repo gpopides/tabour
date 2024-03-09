@@ -157,4 +157,39 @@ class SqsProducerExecutorTest {
         assertEquals(1, producedCount)
         assertTrue { response.messages().isNotEmpty() }
     }
+
+    @Test
+    fun produceBatch() = runTest {
+        val executor = SqsProducerExecutor(sqsClient)
+
+        val producer =
+            sqsProducer(
+                URL.of(URI.create(nonFifoQueueUrl), null),
+                "fifo-queue-producer",
+                ::println
+            )
+        var producedCount = 0
+        val pfc =
+            SqsDataProductionConfiguration(
+                dataProduced = { _, _ -> producedCount++ },
+                produceData = {
+                    BatchSqsData(
+                        listOf(FifoQueueData("my message", messageGroupId = "ad"), FifoQueueData("my message 2", messageGroupId = "abc"))
+                    )
+                },
+                resourceNotFound = { _ -> }
+            )
+
+        executor.produce(producer, pfc)
+
+        val response =
+            sqsClient.receiveMessage(
+                ReceiveMessageRequest.builder().queueUrl(nonFifoQueueUrl).build()
+            )
+
+        println(response.messages())
+
+        //        assertEquals(1, producedCount)
+        //        assertTrue { response.messages().isNotEmpty() }
+    }
 }

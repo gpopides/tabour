@@ -19,6 +19,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sqs.SqsClient
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest
+import software.amazon.awssdk.services.sqs.model.MessageAttributeValue
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
@@ -91,6 +92,41 @@ class SqsProducerExecutorTest {
                 dataProduced = { _, _ -> producedCount++ },
                 produceData = { FifoDataProduction("my message", "groupid") },
                 resourceNotFound = { _ -> }
+            )
+
+        executor.produce(producer, pfc)
+
+        val response =
+            sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(fifoQueueUrl).build())
+
+        assertEquals(1, producedCount)
+        assertTrue { response.messages().isNotEmpty() }
+    }
+
+    @Test
+    fun testProduceToFifoQueueWithMessageAttributes() = runTest {
+        val executor = SqsProducerExecutor(sqsClient)
+
+        val producer =
+            sqsProducer(URL.of(URI.create(fifoQueueUrl), null), "fifo-queue-producer", ::println)
+        var producedCount = 0
+        val pfc =
+            SqsDataProductionConfiguration(
+                dataProduced = { _, _ -> producedCount++ },
+                produceData = {
+                    FifoDataProduction(
+                        "my message",
+                        "groupid",
+                        messageAttributes =
+                            mapOf(
+                                "my-attribute" to
+                                    MessageAttributeValue.builder()
+                                        .stringValue("test-value")
+                                        .build()
+                            )
+                    )
+                },
+                resourceNotFound = { _ -> },
             )
 
         executor.produce(producer, pfc)

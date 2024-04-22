@@ -145,11 +145,16 @@ private fun SqsProductionData.buildMessageRequest(builder: SendMessageBatchReque
             builder.messageBody(message)
             builder.messageGroupId(messageGroupId)
 
+            if (messageAttributes.isNotEmpty()) builder.messageAttributes(messageAttributes)
+
             if (messageDeduplicationId != null) {
                 builder.messageDeduplicationId(messageDeduplicationId)
             }
         }
-        is NonFifoDataProduction -> builder.messageBody(message)
+        is NonFifoDataProduction -> {
+            builder.messageBody(message)
+            if (messageAttributes.isNotEmpty()) builder.messageAttributes(messageAttributes)
+        }
     }
 }
 

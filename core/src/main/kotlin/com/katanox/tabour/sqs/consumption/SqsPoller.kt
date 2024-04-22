@@ -98,6 +98,7 @@ internal class SqsPoller(private val sqs: SqsClient) {
                             .queueUrl(consumer.queueUri.toString())
                             .maxNumberOfMessages(consumer.config.maxMessages)
                             .waitTimeSeconds(consumer.config.waitTime.toSecondsPart())
+                            .messageAttributeNames("All")
                             .build()
                     val messages = sqs.receiveMessage(request).messages()
 

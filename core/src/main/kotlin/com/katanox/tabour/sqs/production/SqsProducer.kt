@@ -4,6 +4,7 @@ import com.katanox.tabour.configuration.sqs.sqsProducerConfiguration
 import com.katanox.tabour.consumption.Config
 import com.katanox.tabour.plug.ProducerPlug
 import java.net.URL
+import software.amazon.awssdk.services.sqs.model.MessageAttributeValue
 
 class SqsProducer<K>
 internal constructor(
@@ -34,14 +35,19 @@ sealed interface SqsDataForProduction
  */
 sealed interface SqsProductionData : SqsDataForProduction {
     val message: String?
+    val messageAttributes: Map<String, MessageAttributeValue>
 }
 
 data class FifoDataProduction(
     override val message: String?,
     val messageGroupId: String,
-    val messageDeduplicationId: String? = null
+    val messageDeduplicationId: String? = null,
+    override val messageAttributes: Map<String, MessageAttributeValue> = emptyMap()
 ) : SqsProductionData
 
-data class NonFifoDataProduction(override val message: String?) : SqsProductionData
+data class NonFifoDataProduction(
+    override val message: String?,
+    override val messageAttributes: Map<String, MessageAttributeValue> = emptyMap()
+) : SqsProductionData
 
 data class BatchDataForProduction(val data: List<SqsProductionData>) : SqsDataForProduction

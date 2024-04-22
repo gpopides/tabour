@@ -121,7 +121,8 @@ class SqsProducerExecutorTest {
                             mapOf(
                                 "my-attribute" to
                                     MessageAttributeValue.builder()
-                                        .stringValue("test-value")
+                                        .dataType("String")
+                                        .stringValue("my-attribute-value")
                                         .build()
                             )
                     )
@@ -132,10 +133,15 @@ class SqsProducerExecutorTest {
         executor.produce(producer, pfc)
 
         val response =
-            sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(fifoQueueUrl).build())
+            sqsClient.receiveMessage(
+                ReceiveMessageRequest.builder()
+                    .queueUrl(fifoQueueUrl)
+                    .messageAttributeNames("All")
+                    .build()
+            )
 
         assertEquals(1, producedCount)
-        assertTrue { response.messages().isNotEmpty() }
+        assertTrue { response.messages().all { it.messageAttributes()["my-attribute"] != null } }
     }
 
     @Test

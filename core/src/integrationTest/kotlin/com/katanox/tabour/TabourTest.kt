@@ -47,6 +47,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sqs.SqsClient
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest
+import software.amazon.awssdk.services.sqs.model.MessageAttributeValue
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
@@ -168,6 +169,76 @@ class TabourTest {
             container.produceMessage("test-registry", "test-producer", sqsProducerConfiguration)
 
             await.withPollDelay(Duration.ofSeconds(3)).untilAsserted { assertTrue { counter >= 1 } }
+
+            purgeQueue(nonFifoQueueUrl)
+            container.stop()
+        }
+
+    @Tag("sqs-consumer-test")
+    @Test
+    fun `consume messages returns message attributes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val container = tabour { numOfThreads = 1 }
+            val config =
+                sqsRegistryConfiguration(
+                    "test-registry",
+                    StaticCredentialsProvider.create(credentials),
+                    Region.of(localstack.region)
+                ) {
+                    this.endpointOverride =
+                        localstack.getEndpointOverride(LocalStackContainer.Service.SQS)
+                }
+
+            val sqsRegistry = sqsRegistry(config)
+            val sqsProducerConfiguration =
+                DataProductionConfiguration<SqsDataForProduction, SqsMessageProduced>(
+                    produceData = {
+                        NonFifoDataProduction(
+                            "this is a test message",
+                            messageAttributes =
+                                mapOf(
+                                    "my-attribute" to
+                                        MessageAttributeValue.builder()
+                                            .dataType("String")
+                                            .stringValue("my-value")
+                                            .build()
+                                )
+                        )
+                    },
+                    dataProduced = { _, _ -> },
+                    resourceNotFound = { _ -> println("Resource not found") }
+                )
+
+            val producer =
+                sqsProducer(URL.of(URI.create(nonFifoQueueUrl), null), "test-producer", ::println)
+
+            var attributeValue: String? = null
+
+            val consumer =
+                sqsConsumer(
+                    URL.of(URI.create(nonFifoQueueUrl), null),
+                    key = "my-consumer",
+                    onSuccess = {
+                        attributeValue = it.messageAttributes()["my-attribute"]?.stringValue()
+                        true
+                    },
+                    onError = ::println
+                ) {
+                    this.config = sqsConsumerConfiguration {
+                        sleepTime = Duration.ofMillis(200)
+                        consumeWhile = { attributeValue == null }
+                    }
+                }
+
+            sqsRegistry.addConsumer(consumer).addProducer(producer)
+            container.register(sqsRegistry)
+            container.start()
+
+            container.produceMessage("test-registry", "test-producer", sqsProducerConfiguration)
+
+            await.withPollDelay(Duration.ofSeconds(3)).untilAsserted {
+                assertTrue { attributeValue == "my-value" }
+            }
 
             purgeQueue(nonFifoQueueUrl)
             container.stop()

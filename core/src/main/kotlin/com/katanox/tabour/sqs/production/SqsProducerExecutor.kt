@@ -2,6 +2,7 @@ package com.katanox.tabour.sqs.production
 
 import aws.sdk.kotlin.services.sqs.SqsClient
 import aws.sdk.kotlin.services.sqs.model.SendMessageBatchRequestEntry
+import aws.sdk.kotlin.services.sqs.model.SendMessageRequest
 import com.katanox.tabour.retry
 import java.time.Instant
 
@@ -33,7 +34,7 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
                 if (!produceData.message.isNullOrEmpty()) {
                     retry(producer.config.retries, { producer.onError(throwableToError(it)) }) {
                         sqs.sendMessage(
-                                aws.sdk.kotlin.services.sqs.model.SendMessageRequest {
+                                SendMessageRequest {
                                     produceData.buildMessageRequest(this)
                                     queueUrl = url
                                 }
@@ -94,12 +95,10 @@ internal class SqsProducerExecutor(private val sqs: SqsClient) {
     }
 }
 
-private fun SqsProductionData.buildMessageRequest(
-    builder: aws.sdk.kotlin.services.sqs.model.SendMessageRequest.Builder
-) {
+private fun SqsProductionData.buildMessageRequest(builder: SendMessageRequest.Builder) {
     when (this) {
         is FifoDataProduction -> {
-            builder.messageBody = "message"
+            builder.messageBody = message
             builder.messageGroupId = messageGroupId
 
             if (messageDeduplicationId != null) {

@@ -301,9 +301,7 @@ class TabourTest {
                 )
 
             val producer =
-                sqsProducer(URL.of(URI.create(fifoQueueUrl), null), "fifo-test-producer") {
-                    println(it)
-                }
+                sqsProducer(URL.of(URI.create(fifoQueueUrl), null), "fifo-test-producer") {}
 
             sqsRegistry.addProducer(producer)
             container.register(sqsRegistry)
@@ -327,6 +325,7 @@ class TabourTest {
                             }
                         )
                     }
+                    println(receiveMessagesResponse.messages)
 
                     assertTrue(receiveMessagesResponse.messages?.isNotEmpty() == true)
                     assertEquals(

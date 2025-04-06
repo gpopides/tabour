@@ -1,5 +1,7 @@
 package com.katanox.tabour.configuration.sqs
 
+import aws.sdk.kotlin.services.sqs.model.Message
+import aws.smithy.kotlin.runtime.auth.awscredentials.CredentialsProvider
 import com.katanox.tabour.configuration.core.config
 import com.katanox.tabour.consumption.ConsumptionError
 import com.katanox.tabour.sqs.SqsRegistry
@@ -9,9 +11,6 @@ import com.katanox.tabour.sqs.production.ProductionError
 import com.katanox.tabour.sqs.production.SqsProducer
 import com.katanox.tabour.sqs.production.SqsProducerConfiguration
 import java.net.URL
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.sqs.model.Message
 
 /**
  * Creates a new [SqsRegistry.Configuration] which can be used as configuration for a [SqsRegistry]
@@ -20,8 +19,8 @@ import software.amazon.awssdk.services.sqs.model.Message
  */
 fun <T> sqsRegistryConfiguration(
     key: T,
-    credentialsProvider: AwsCredentialsProvider,
-    region: Region,
+    credentialsProvider: CredentialsProvider,
+    region: String,
     init: SqsRegistry.Configuration<T>.() -> Unit,
 ): SqsRegistry.Configuration<T> =
     config(SqsRegistry.Configuration(key, credentialsProvider, region), init)
@@ -32,8 +31,8 @@ fun <T> sqsRegistryConfiguration(
  */
 fun <T> sqsRegistryConfiguration(
     key: T,
-    credentialsProvider: AwsCredentialsProvider,
-    region: Region,
+    credentialsProvider: CredentialsProvider,
+    region: String,
 ): SqsRegistry.Configuration<T> = SqsRegistry.Configuration(key, credentialsProvider, region)
 
 /** Creates a new [SqsRegistry] */

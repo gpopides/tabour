@@ -23,7 +23,10 @@ fun <T> sqsRegistryConfiguration(
     region: String,
     init: SqsRegistry.Configuration<T>.() -> Unit,
 ): SqsRegistry.Configuration<T> =
-    config(SqsRegistry.Configuration(key, credentialsProvider, region), init)
+    config(SqsRegistry.Configuration(key, region)) {
+        init()
+        this.credentialsProvider = credentialsProvider
+    }
 
 /**
  * Creates a new [SqsRegistry.Configuration] which can be used as configuration for a [SqsRegistry]
@@ -33,7 +36,8 @@ fun <T> sqsRegistryConfiguration(
     key: T,
     credentialsProvider: CredentialsProvider,
     region: String,
-): SqsRegistry.Configuration<T> = SqsRegistry.Configuration(key, credentialsProvider, region)
+): SqsRegistry.Configuration<T> =
+    SqsRegistry.Configuration(key, region).apply { this.credentialsProvider = credentialsProvider }
 
 /** Creates a new [SqsRegistry] */
 fun <T> sqsRegistry(config: SqsRegistry.Configuration<T>): SqsRegistry<T> = SqsRegistry(config)

@@ -26,9 +26,7 @@ class SqsRegistry<T> internal constructor(private val configuration: Configurati
     private val consumers: MutableList<SqsConsumer<*>> = mutableListOf()
     private val producers: MutableSet<SqsProducer<*>> = mutableSetOf()
     private val sqs: SqsClient = SqsClient {
-        if (configuration.endpointOverride != null) {
-            endpointUrl = Url.parse(configuration.endpointOverride.toString())
-        }
+        endpointUrl = configuration.endpointOverride?.toString()?.let(Url::parse)
         region = configuration.region
         credentialsProvider = configuration.credentialsProvider
     }
@@ -82,8 +80,6 @@ class SqsRegistry<T> internal constructor(private val configuration: Configurati
     class Configuration<T>(
         /** Key of the registry */
         val key: T,
-        /** Credentials to be used with the AWS SDK in order to perform AWS operations */
-        val credentialsProvider: CredentialsProvider,
         /** The region of the credentials */
         val region: String,
     ) : Config {
@@ -92,5 +88,8 @@ class SqsRegistry<T> internal constructor(private val configuration: Configurati
          * with Localstack
          */
         var endpointOverride: URI? = null
+
+        /** Credentials to be used with the AWS SDK in order to perform AWS operations */
+        var credentialsProvider: CredentialsProvider? = null
     }
 }
